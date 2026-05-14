@@ -1,6 +1,7 @@
 module TentMPS
 
-using MPSKit, MPSKitModels, TensorKit
+using Reexport
+@reexport using MPSKit, MPSKitModels, TensorKit
 
 # tensorkit core
 using TensorKit, BlockTensorKit
@@ -9,7 +10,7 @@ using TensorKit: permute
 
 # MPSKit structs
 using MPSKit: AbstractFiniteMPS, GrassmannMPS, Multiline, MPODerivativeOperator
-using MPSKit: Defaults, Algorithm, TransferMatrix
+using MPSKit: Algorithm, TransferMatrix
 
 # tangent space projections
 using MPSKit: AC_hamiltonian, AC2_hamiltonian, C_hamiltonian
@@ -26,7 +27,7 @@ using MPSKit: LoggingExtras, IterLog, @infov, @warnv,
     loginit!, logiter!, logcancel!, logfinish!
 
 # linear algebra and arrays
-using LinearAlgebra
+using LinearAlgebra, FastGaussQuadrature
 
 # solvers
 using OptimKit, KrylovKit
@@ -38,13 +39,13 @@ using OhMyThreads: tforeach
 include("utils.jl")
 include("defaults.jl")
 include("core/mpskit_overrides.jl")
+include("algorithms/environments.jl")
 
 include("core/hamiltonian.jl")
 include("core/norm_tensor.jl")
 include("core/refinement.jl")
 include("core/observables.jl")
 
-include("algorithms/environments.jl")
 include("algorithms/common.jl")
 include("algorithms/dmrg.jl")
 include("algorithms/vumps.jl")

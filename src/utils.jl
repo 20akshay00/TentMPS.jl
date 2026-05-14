@@ -21,7 +21,7 @@ function tent_function_derivative(x, n, h, grid)
     end
 end
 
-function tent_basis_overlap_matrix(h, grid)
+function tent_basis_overlap_matrix(grid; h=Defaults.h(grid))
     N, dx = length(grid) - 2, step(grid)
 
     offdiag = fill(dx^3 / (6 * h^2), N - 1)

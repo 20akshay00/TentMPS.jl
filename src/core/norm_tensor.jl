@@ -58,7 +58,7 @@ end
 function _build_norm_mpo(grid, cutoff=1; tol=1e-10, getW=false, h=Defaults.h(grid))
     # hard-coded for tent functions
     N = length(grid) - 2 # number of tents
-    overlap_matrix = tent_basis_overlap_matrix(h, grid)
+    overlap_matrix = tent_basis_overlap_matrix(grid; h=h)
     coefficient_matrix = single_particle_transformation(overlap_matrix)
     two_site_matrices = two_site_decomposition(coefficient_matrix)
     two_site_gates = construct_two_site_gates(two_site_matrices, cutoff)
@@ -119,7 +119,7 @@ function change_mpo_physical_space(mpo, m; side=:both, trunctol=nothing)
     return mpo
 end
 
-function build_norm_mpo(grid, cutoff=1; cutoff_buffer=cutoff, trunctol=nothing, kwargs...)
+function build_norm_mpo(grid, cutoff=1; cutoff_buffer=cutoff, trunctol=1e-10, kwargs...)
     W = change_mpo_physical_space(_build_norm_mpo(grid, cutoff + cutoff_buffer, getW=true; kwargs...), cutoff + 1, side=:in, trunctol=trunctol)
     return _myprod(conj(W), W)
 end

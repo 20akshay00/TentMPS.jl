@@ -70,7 +70,7 @@ function Base.iterate(it::IterativeSolver{<:VUMPS,<:GeneralizedVUMPSState}, stat
 end
 
 function localupdate_step!(
-    it::IterativeSolver{<:VUMPS,<:GeneralizedVUMPSState}, state, scheduler=Defaults.scheduler[]
+    it::IterativeSolver{<:VUMPS,<:GeneralizedVUMPSState}, state, scheduler=MPSKit.Defaults.scheduler[]
 )
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
     alg_orth = LAPACK_HouseholderQR(; positive=true) #Defaults.alg_qr()
@@ -94,8 +94,8 @@ end
 
 function _localupdate_vumps_step!(
     site, ψ, H, N, Henvs, Nenvs, AC₀, C₀;
-    parallel::Bool=false, alg_orth=Defaults.alg_qr(),
-    alg_eigsolve=Defaults.eigsolver, which
+    parallel::Bool=false, alg_orth=MPSKit.Defaults.alg_qr(),
+    alg_eigsolve=MPSKit.Defaults.eigsolver, which
 )
     if !parallel
         Hac = AC_hamiltonian(site, ψ, H, ψ, Henvs)

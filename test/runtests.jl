@@ -1,8 +1,6 @@
 using Test
-using TentMPS, QuadGK, LinearAlgebra
-using Combinatorics
-
-using TentMPS: single_particle_transformation, two_site_decomposition, construct_two_site_gates, tent_basis_overlap_matrix, potential_hamiltonian_coefficients
+using TentMPS, QuadGK, LinearAlgebra, Combinatorics
+using TentMPS: single_particle_transformation, two_site_decomposition, construct_two_site_gates, tent_basis_overlap_matrix, potential_hamiltonian_coefficients, tent_function
 
 # utility functions
 function mps_fockstate(N::Int, fock_dict::Dict{Int,Int}, cutoff::Int=1)
@@ -58,9 +56,8 @@ end
     N = L - 1 # tents
     grid = range(-5, 5, L + 1)
     dx = step(grid)
-    h = sqrt(2 / 3 * dx^3)
 
-    overlap_matrix = tent_basis_overlap_matrix(h, grid)
+    overlap_matrix = tent_basis_overlap_matrix(grid)
     coefficient_matrix = single_particle_transformation(overlap_matrix)
     @test coefficient_matrix' * coefficient_matrix ≈ overlap_matrix
     @test coefficient_matrix isa UpperTriangular
@@ -96,9 +93,8 @@ end
     N = L - 1 # tents
     grid = range(-5, 5, L + 1)
     dx = step(grid)
-    h = sqrt(2 / 3 * dx^3)
 
-    overlap_matrix = tent_basis_overlap_matrix(h, grid)
+    overlap_matrix = tent_basis_overlap_matrix(grid)
     coefficient_matrix = single_particle_transformation(overlap_matrix)
     two_site_matrices = two_site_decomposition(coefficient_matrix)
     @test coefficient_matrix ≈ prod(reverse(embed_blocks(two_site_matrices)))
@@ -109,11 +105,10 @@ end
     N = L - 1 # tents
     grid = range(-5, 5, L + 1)
     dx = step(grid)
-    h = sqrt(2 / 3 * dx^3)
     cutoff = 4
 
-    Ho = build_norm_mpo(h, grid, cutoff)
-    overlap_matrix = tent_basis_overlap_matrix(h, grid)
+    Ho = build_norm_mpo(grid, cutoff)
+    overlap_matrix = tent_basis_overlap_matrix(grid)
     modes = [
         # --- N=1 ---
         (Dict(1 => 1), Dict(1 => 1)),
@@ -182,11 +177,10 @@ end
     N = L - 1 # tents
     grid = range(-1, 1, L + 1)
     dx = step(grid)
-    h = sqrt(2 / 3 * dx^3)
     cutoff = 2
 
-    Ho = build_norm_mpo(h, grid, cutoff, cutoff_buffer=cutoff, trunctol=1e-10)
-    overlap_matrix = tent_basis_overlap_matrix(h, grid)
+    Ho = build_norm_mpo(grid, cutoff)
+    overlap_matrix = tent_basis_overlap_matrix(grid)
 
     # helpers
     to_modes(occ) = vcat([fill(i, n) for (i, n) in enumerate(occ)]...)
@@ -207,7 +201,7 @@ end
 end
 
 @testset "Potential matrix elements" begin
-    function harmonic_potential_hamiltonian_coefficients(h, grid)
+    function harmonic_potential_hamiltonian_coefficients(grid; h=TentMPS.Defaults.h(grid))
         dx = step(grid)
         tv_ii = 0.5 * map(x -> dx^3 * (10 * x^2 + dx^2) / (15 * h^2), grid[2:end-1])
         tv_ij = 0.5 * map(x -> dx^3 * (10 * x^2 + 10 * x * dx + 3 * dx^2) / (60 * h^2), grid[2:end-2])
@@ -217,41 +211,40 @@ end
     L = 200 # segments
     xmax = 7
     xs = range(-xmax, xmax, L + 1)
-    h = sqrt(2 / 3 * step(xs)^3)
     V(x) = 0.5x^2
 
-    diag, offdiag = potential_hamiltonian_coefficients(V, h, xs, tol=1e-12)
-    diag1, offdiag1 = harmonic_potential_hamiltonian_coefficients(h, xs)
+    diag, offdiag = potential_hamiltonian_coefficients(V, xs, tol=1e-12)
+    diag1, offdiag1 = harmonic_potential_hamiltonian_coefficients(xs)
 
     @test isapprox(norm(diag - diag1), 0., atol=1e-10)
     @test isapprox(norm(offdiag - offdiag1), 0., atol=1e-10)
 end
 
-# assumes symmetric wavefunctions; very unoptimized, only for small benchmarks
-function single_particle_density_matrix_naive(Hn, state, N, h, cutoff, base_grid, compute_grid=base_grid)
-    chain = FiniteChain(N)
-    global_a_min = [@mpoham a_min(cutoff=cutoff){chain[i]} for i in 1:N]
+# # assumes symmetric wavefunctions; very unoptimized, only for small benchmarks
+# function single_particle_density_matrix_naive(Hn, state, N, cutoff, base_grid; compute_grid=base_grid, h=TentMPS.Defaults.h(grid))
+#     chain = FiniteChain(N)
+#     global_a_min = [@mpoham a_min(cutoff=cutoff){chain[i]} for i in 1:N]
 
-    op_states = [op * state for op in global_a_min]
-    h_op_states = [Hn * ψ for ψ in op_states]
-    h_state = Hn * state
+#     op_states = [op * state for op in global_a_min]
+#     h_op_states = [Hn * ψ for ψ in op_states]
+#     h_state = Hn * state
 
-    diagonal = map(1:N) do i
-        dot(op_states[i], h_op_states[i])
-    end
+#     diagonal = map(1:N) do i
+#         dot(op_states[i], h_op_states[i])
+#     end
 
-    off_diagonal = map(1:N-1) do i
-        dot(op_states[i], h_op_states[i+1])
-    end
+#     off_diagonal = map(1:N-1) do i
+#         dot(op_states[i], h_op_states[i+1])
+#     end
 
-    spdm = Tridiagonal(conj.(off_diagonal), diagonal, off_diagonal)
+#     spdm = Tridiagonal(conj.(off_diagonal), diagonal, off_diagonal)
 
-    normalization = dot(state, h_state)
+#     normalization = dot(state, h_state)
 
-    densities = map(compute_grid) do x
-        f_vec = tent_function.(x, 1:N, h, Ref(base_grid))
-        return real(f_vec' * spdm * f_vec)
-    end
+#     densities = map(compute_grid) do x
+#         f_vec = tent_function.(x, 1:N, h, Ref(base_grid))
+#         return real(f_vec' * spdm * f_vec)
+#     end
 
-    return real.(densities ./ normalization)
-end
+#     return real.(densities ./ normalization)
+# end

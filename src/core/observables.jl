@@ -231,17 +231,8 @@ end
 
 ### other observables
 
-function real_space_single_particle_density_matrix(xs, spdm, base_grid; h=Defaults.h(base_grid))
-    N = size(spdm, 1)
-    G = length(xs)
-
-    F = zeros(Float64, N, G)
-    for i in 1:G
-        x = xs[i]
-        for k in 1:N
-            F[k, i] = tent_function(x, k, h, base_grid)
-        end
-    end
+function real_space_single_particle_density_matrix(xs, spdm, grid; h=Defaults.h(grid))
+    F = [tent_function(x, k, h, grid) for k in 1:size(spdm, 1), x in xs]
     return F' * spdm * F
 end
 

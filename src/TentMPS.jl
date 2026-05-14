@@ -57,7 +57,7 @@ include("algorithms/dense_eig.jl")
 export build_norm_mpo, construct_hamiltonian, find_generalized_groundstate
 
 # observables
-export particle_density, get_energy_densities, single_particle_density_matrix, real_space_single_particle_density_matrix, momentum_distribution
+export particle_density, get_energy_densities, single_particle_density_matrix, real_space_single_particle_density_matrix, momentum_distribution, tan_contact
 
 # eigensolver
 export LOBPCG, GeneralizedGradientGrassmann, DenseEig

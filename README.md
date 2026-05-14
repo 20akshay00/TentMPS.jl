@@ -41,8 +41,7 @@ state, = find_generalized_groundstate(state, Ht, Hn, DMRG(maxiter=2000, tol=1e-5
 The package also implements a refinement scheme to interpolate the state onto a finer grid.
 
 ```julia
-refined_xs = range(-xmax, xmax, 2*L + 1)
-@time refined_state = refine_state(state, xs)[2]
+refined_xs, refined_state = refine_state(state, xs)
 ```
 
 For additional scripts demonstrating the usage of this package, take a look at [20akshay00/TentMPSAnalysis](https://github.com/20akshay00/TentMPSAnalysis). 

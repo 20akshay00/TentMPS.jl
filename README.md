@@ -7,7 +7,7 @@
 The current implementation supports the following single species bosonic model;
 
 $$
-\begin{align*}\hat{H} &= \int \dd x \, \hat{\Psi}^{\dagger}(x) \left[ -\frac{1}{2} \partial_x^2 + V(x) - \mu \right] \hat{\Psi}(x) \nonumber \\ &\quad + g\int \dd x \, \hat{\Psi}^{\dagger}(x)\hat{\Psi}^{\dagger}(x)\hat{\Psi}(x)\hat{\Psi}(x)\end{align*}
+\hat{H} = \int dx \, \hat{\Psi}^{\dagger}(x) \left[ -\frac{1}{2} \partial_x^2 + V(x) - \mu \right] \hat{\Psi}(x) + g\int dx \, \hat{\Psi}^{\dagger}(x)\hat{\Psi}^{\dagger}(x)\hat{\Psi}(x)\hat{\Psi}(x)
 $$
 
 > [!WARNING]

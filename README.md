@@ -5,6 +5,7 @@
 **TentMPS** is a framework for extracting ground state properties of 1D continuum quantum many-body systems. It integrates first-order finite-element expansions (i.e, linear "tent" functions) with the Matrix Product State (MPS) formalism. By using a finite-element basis rather than standard finite-difference grids, TentMPS provides a **strictly variational** treatment of the continuum limit, ensuring that ground-state energies remain a rigorous upper bound. 
 
 The current implementation supports the following single species bosonic model;
+
 $$
 \begin{align*}\hat{H} &= \int \dd x \, \hat{\Psi}^{\dagger}(x) \left[ -\frac{1}{2} \partial_x^2 + V(x) - \mu \right] \hat{\Psi}(x) \nonumber \\ &\quad + g\int \dd x \, \hat{\Psi}^{\dagger}(x)\hat{\Psi}^{\dagger}(x)\hat{\Psi}(x)\hat{\Psi}(x)\end{align*}
 $$

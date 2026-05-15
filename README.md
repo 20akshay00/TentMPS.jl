@@ -19,6 +19,8 @@ using Pkg
 Pkg.add(url="https://github.com/20akshay00/TentMPS.jl")
 ```
 
+It is also recommended to install [`TensorKit.jl`](https://github.com/QuantumKitHub/TensorKit.jl) and [`MPSKit.jl`](https://github.com/QuantumKitHub/MPSKit.jl) as they are heavily utilized in this package.
+
 ## Usage
 
 Following is the general workflow to find the groundstate for a specified potential $V(x)$.

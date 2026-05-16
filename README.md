@@ -10,9 +10,6 @@ $$
 \hat{H} = \int dx \ \hat{\Psi}^{\dagger}(x) \left[ -\frac{1}{2} \partial_x^2 + V(x) - \mu \right] \hat{\Psi}(x) + g\int dx \ \hat{\Psi}^{\dagger}(x)\hat{\Psi}^{\dagger}(x)\hat{\Psi}(x)\hat{\Psi}(x)
 $$
 
-> [!WARNING]
-> **Type Piracy Alert:** This package currently performs type piracy on `MPSKit.jl` to extend specific solver behaviors. Use with caution.
-
 ## Installation
 ```julia
 using Pkg

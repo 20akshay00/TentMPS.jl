@@ -363,7 +363,7 @@ end
     X
 end
 
-function final_retval(X, AX, BX, λ, resid_history, niter, n_matvec)
+function final_retval(X, AX, BX, λ, resid_history, niter, n_matvec, nlocked)
     λ_host = to_cpu(λ)  # Copy to CPU for element-wise access
     if !issorted(λ_host)
         p = sortperm(λ_host)
@@ -375,7 +375,7 @@ function final_retval(X, AX, BX, λ, resid_history, niter, n_matvec)
     end
     (; λ=λ_host, X, AX, BX,
         residual_norms=resid_history[:, niter+1],
-        residual_history=resid_history[:, 1:niter+1], n_matvec)
+        residual_history=resid_history[:, 1:niter+1], n_matvec, nlocked)
 end
 
 # Computes λ = real((X' * AX) / (X' *BX)), for each column of X
@@ -520,7 +520,7 @@ end
         if nlocked >= n_conv_check  # Converged!
             X .= new_X  # Update the part of X which is still active
             AX .= new_AX
-            return final_retval(full_X, full_AX, full_BX, full_λs, resid_history, niter, n_matvec)
+            return final_retval(full_X, full_AX, full_BX, full_λs, resid_history, niter, n_matvec, nlocked)
         end
         newly_locked = nlocked - prev_nlocked
         active = newly_locked+1:size(X, 2)  # newly active vectors
@@ -608,7 +608,7 @@ end
         niter = niter + 1
     end
 
-    final_retval(full_X, full_AX, full_BX, full_λs, resid_history, maxiter, n_matvec)
+    final_retval(full_X, full_AX, full_BX, full_λs, resid_history, maxiter, n_matvec, nlocked)
 end
 
 ## KrylovKit interface
@@ -623,18 +623,50 @@ Base.@kwdef struct LOBPCG{P,T,O}
 end
 
 # very bad!
-# hard-coded for (D, d, D) TensorMaps for the lowest eigenvalue only!; also `which` is a stub
-function KrylovKit.geneigsolve((h, n), x₀, howmany::Int, which, alg::LOBPCG)
-    res = _LOBPCG(h, repeat(vec(x₀.data), 1, howmany), n, alg.preconditioner, alg.tol, alg.maxiter, miniter=alg.miniter, ortho_tol=alg.ortho_tol, ignore_warnings=alg.ignore_warnings)
+# hard-coded for (D, d, D) TensorMaps for the lowest eigenvalue only!
+function KrylovKit.geneigsolve(
+    (h, n)::Tuple{MPSKit.MPODerivativeOperator,MPSKit.MPODerivativeOperator},
+    x₀::TensorMap,
+    howmany::Int,
+    which, # stub!
+    alg::LOBPCG
+)
+
+    h_linmap = MPODerivativeLinearMap(h)
+    n_linmap = MPODerivativeLinearMap(n)
+
+    X_init = zeros(ComplexF64, h_linmap.total_dim, howmany)
+    X_init[:, 1] .= vec(x₀.data)
+    if howmany > 1
+        for i in 2:howmany
+            X_init[:, i] .= randn(ComplexF64, h_linmap.total_dim)
+        end
+    end
+
+    res = _LOBPCG(
+        h_linmap,
+        X_init,
+        n_linmap,
+        alg.preconditioner,
+        alg.tol,
+        alg.maxiter;
+        miniter=alg.miniter,
+        ortho_tol=alg.ortho_tol
+    )
+
+    vecs = map(eachcol(res.X)) do v
+        TensorMap(reshape(copy(v), h_linmap.in_size), h_linmap.in_space)
+    end
 
     numiter = size(res.residual_history, 2) - 1
-    numops = res.n_matvec
-    normres = res.residual_norms
-    converged = (numiter < alg.maxiter) ? 1 : 0 # I don't know how to get this info for each vector
-
-    return (
-        res.λ,
-        map(v -> TensorMap(reshape(v, (dims(codomain(x₀))..., dims(domain(x₀))...)), space(x₀)), eachcol(res.X)),
-        ConvergenceInfo(converged, nothing, normres, numiter, numops)
+    info = ConvergenceInfo(
+        res.nlocked,
+        nothing,
+        res.residual_norms,
+        numiter,
+        res.n_matvec
     )
+
+    return res.λ, vecs, info
 end
+

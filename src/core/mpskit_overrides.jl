@@ -64,43 +64,50 @@ import LinearAlgebra: mul!
 import KrylovKit: geneigsolve
 using KrylovKit: ConvergenceInfo
 
-# TYPE PIRACY!!
-function input_space(h::MPSKit.MPODerivativeOperator)
+"""
+    MPODerivativeLinearMap(op::MPODerivativeOperator)
 
-    V_l_raw = left_virtualspace(h.leftenv)
-    V_l = V_l_raw isa SumSpace ? only(V_l_raw) : V_l_raw
+A wrapper that transforms an `MPODerivativeOperator` (which acts on `TensorMap`s)
+into an `AbstractMatrix` interface (which acts on flattened `Arrays`).
+This enables use with LOBPCG.
+"""
+struct MPODerivativeLinearMap{T}
+    inner_op::T
+    in_space::Any
+    in_size::Tuple
+    total_dim::Int
+end
 
-    V_r_raw = right_virtualspace(h.rightenv)
-    V_r = V_r_raw isa SumSpace ? only(V_r_raw) : V_r_raw
+function MPODerivativeLinearMap(op::MPSKit.MPODerivativeOperator)
+    v_l_raw = left_virtualspace(op.leftenv)
+    v_l = v_l_raw isa SumSpace ? only(v_l_raw) : v_l_raw
 
-    V_o = prod(physicalspace, h.operators)
+    v_r_raw = right_virtualspace(op.rightenv)
+    v_r = v_r_raw isa SumSpace ? only(v_r_raw) : v_r_raw
 
-    input_spaces = V_l ⊗ V_o ← V_r
+    v_p = prod(physicalspace, op.operators)
 
-    if length(codomain(input_spaces).spaces) == 3
-        input_spaces = TensorKit.permute(input_spaces, ((1, 2), (4, 3)))
+    space = v_l ⊗ v_p ← v_r
+    if length(codomain(space).spaces) == 3
+        space = TensorKit.permute(space, ((1, 2), (4, 3)))
     end
 
-    return input_spaces
+    sz = Tuple([dims(codomain(space))...; dims(domain(space))...])
+    dim = prod(sz)
+
+    return MPODerivativeLinearMap{typeof(op)}(op, space, sz, dim)
 end
 
-function input_size(h::MPSKit.MPODerivativeOperator)
-    s = input_space(h)
-    Tuple([dims(codomain(s))...; dims(domain(s))...])
+Base.size(A::MPODerivativeLinearMap) = (A.total_dim, A.total_dim)
+Base.size(A::MPODerivativeLinearMap, i::Int) = i <= 2 ? A.total_dim : 1
+Base.eltype(::MPODerivativeLinearMap) = ComplexF64
+
+function LinearAlgebra.mul!(C::AbstractMatrix, A::MPODerivativeLinearMap, X::AbstractMatrix)
+    for i in 1:size(X, 2)
+        Xt = TensorMap(reshape(view(X, :, i), A.in_size), A.in_space)
+        Ct = A.inner_op * Xt
+        C[:, i] .= vec(Ct.data)
+    end
+    return C
 end
 
-function Base.size(h::MPSKit.MPODerivativeOperator)
-    V_l = left_virtualspace(h.leftenv)
-    V_r = right_virtualspace(h.rightenv)
-    V_o = prod(physicalspace, h.operators)
-
-    return (dim(V_l), dim(V_o), dim(V_r))
-end
-
-Base.size(h::MPSKit.MPODerivativeOperator, i::Integer) = size(h)[i]
-
-function LinearAlgebra.mul!(C, A::MPSKit.MPODerivativeOperator, X)
-    Xt = TensorMap(reshape(X, input_size(A)), input_space(A))
-    Ct = A * Xt
-    C .= Ct.data
-end

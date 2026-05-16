@@ -4,7 +4,7 @@ using MPSKit: MPOTensor, check_length, fuse_mul_mpo
 using TensorKit: notrunc, SDD
 
 # with TentMPS, the norm tensor is extensive in system size, so we should avoid propagating the scaling factors from the SVD through the chain as it will grow exponentially 
-function _mychangebonds!(mpo::FiniteMPO, alg::SvdCut)
+function _safe_changebonds!(mpo::FiniteMPO, alg::SvdCut)
     length(mpo) == 1 && return mpo
 
     O_left = transpose(mpo[1], ((3, 1, 2), (4,)))
@@ -39,8 +39,8 @@ function _mychangebonds!(mpo::FiniteMPO, alg::SvdCut)
     return mpo
 end
 
-# changed to used _mychangebonds! instead of MPSKit.changebonds!
-function _myprod(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor}, trunctol=nothing)
+# changed to used _safe_changebonds! instead of MPSKit.changebonds!
+function _safe_prod(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor}, trunctol=nothing)
     N = check_length(mpo1, mpo2)
     (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
 
@@ -52,7 +52,7 @@ function _myprod(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor}, tru
     end
 
     O = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
-    return _mychangebonds!(FiniteMPO(O), SvdCut(; trscheme=isnothing(trunctol) ? notrunc() : truncerr(trunctol)))
+    return _safe_changebonds!(FiniteMPO(O), SvdCut(; trscheme=isnothing(trunctol) ? notrunc() : truncerr(trunctol)))
 end
 
 ########################################################

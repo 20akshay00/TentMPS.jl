@@ -83,7 +83,7 @@ function _build_norm_mpo(grid, cutoff=1; tol=1e-10, getW=false, h=Defaults.h(gri
     local_tensors[N] = insertrightunit(transpose(prevV, ((1, 2), (3,))), 3)
 
     W = FiniteMPO(collect(typeof(first(local_tensors)), local_tensors))
-    return (getW) ? W : _myprod(conj(W), W)
+    return (getW) ? W : _safe_prod(conj(W), W)
 end
 
 ## experimental/hacky
@@ -107,11 +107,11 @@ function change_mpo_physical_space(mpo, m; side=:both, trunctol=nothing)
         if n_out != n_in
             throw(ArgumentError("pOut ($n_out) and pIn ($n_in) dimensions differ. Specify :in or :out instead of :both."))
         end
-        mpo = _myprod(p_out, _myprod(mpo, p_in, trunctol), trunctol)
+        mpo = _safe_prod(p_out, _safe_prod(mpo, p_in, trunctol), trunctol)
     elseif side === :out
-        mpo = _myprod(p_out, mpo, trunctol)
+        mpo = _safe_prod(p_out, mpo, trunctol)
     elseif side === :in
-        mpo = _myprod(mpo, p_in, trunctol)
+        mpo = _safe_prod(mpo, p_in, trunctol)
     else
         throw(ArgumentError("Invalid side: $side. Use :in, :out, or :both."))
     end
@@ -121,7 +121,7 @@ end
 
 function build_norm_mpo(grid, cutoff=1; cutoff_buffer=cutoff, trunctol=1e-10, kwargs...)
     W = change_mpo_physical_space(_build_norm_mpo(grid, cutoff + cutoff_buffer, getW=true; kwargs...), cutoff + 1, side=:in, trunctol=trunctol)
-    return _myprod(conj(W), W)
+    return _safe_prod(conj(W), W)
 end
 
 # equivalent to exponential, implemented just for testing purposes

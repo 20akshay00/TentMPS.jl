@@ -18,11 +18,15 @@ Pkg.add(url="https://github.com/20akshay00/TentMPS.jl")
 
 It is also recommended to install [`TensorKit.jl`](https://github.com/QuantumKitHub/TensorKit.jl) and [`MPSKit.jl`](https://github.com/QuantumKitHub/MPSKit.jl) as they are heavily utilized in this package.
 
-## Usage
+## Quickstart
 
 Following is the general workflow to find the groundstate for a specified potential $V(x)$.
 ```julia
-cutoff, xmax, L = 2, 7., 50
+using TentMPS, MPSKit
+
+cutoff = 2 # local particle cutoff per site
+xmax = 7. # defines the domain [-xmax, xmax]
+L = 50 # L number of segments => L-1 basis functions
 xs = range(-xmax, xmax, L + 1)
 
 g, μ = 10., 10.
@@ -32,10 +36,15 @@ g, μ = 10., 10.
 @time Ht = construct_hamiltonian(Hn, xs, cutoff; g=g, μ=μ, V=x->0.5x^2)
 
 bond_dimension = 15
+state = FiniteMPS(L - 1, ℂ^(cutoff + 1), ℂ^(bond_dimension)) # random initial state
 state, = find_generalized_groundstate(state, Ht, Hn, DMRG2(maxiter=1, tol=1e-5, verbosity=3, alg_eigsolve=LOBPCG(maxiter=5000), trscheme=truncdim(bond_dimension)))
 state, = find_generalized_groundstate(state, Ht, Hn, DMRG(maxiter=2000, tol=1e-5, verbosity=3, alg_eigsolve=LOBPCG(maxiter=5000, ignore_warnings=true)))
 
 ```
+We currently support three generalized eigenvalue solvers; 
+- `DenseEig`: constructs the full matrix representation of effective MPOs and diagonalizes with `LinearAlgebra.eigen`. *Recommended for small benchmark cases*.
+- `GolubYe`: borrowed from `KrylovKit.jl` to solve the eigenvalue problem within a Krylov subspace.
+- `LOBPCG`: adapted from `DFTK.jl` to use a variant of conjugate gradients. *This seems to be the optimal choice for larger problems.*
 
 The package also implements a refinement scheme to interpolate the state onto a finer grid.
 

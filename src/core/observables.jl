@@ -1,4 +1,4 @@
-# computes ⟨O1p_i O2_p_j N O1m_i O2m_j⟩; i.e, generic expectation values for operators in computational basis
+# computes ⟨O1p_i O2_p_j N O1m_i O2m_j⟩; i.e, expectation values for operators in computational basis such that j=i+1
 # p -> creation, m -> annihilation
 function _nearest_neighbour_correlator(Hn, state; O1p, O1m, O2p, O2m)
     envs = environments(state, Hn)

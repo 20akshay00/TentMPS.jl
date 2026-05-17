@@ -1,3 +1,31 @@
+# computes ⟨O1p_i O2_p_j N O1m_i O2m_j⟩; i.e, generic expectation values for operators in computational basis
+# p -> creation, m -> annihilation
+function generic_expval(Hn, state; O1p, O1m, O2p, O2m)
+    envs = environments(state, Hn)
+    N = length(state)
+
+    vals = map(1:N-1) do i
+        tm1 = TransferMatrix(state.AL[i], O1p × Hn[i] × O1m, state.AL[i])
+        tm2 = TransferMatrix(state.AC[i+1], O2p × Hn[i+1] × O2m, state.AC[i+1])
+        ρL = leftenv(envs, i, state)
+        ρR = rightenv(envs, i + 1, state)
+
+        res = tm1 * (tm2 * ρR)
+        @tensor scalar[] := ρL[1, 2, 3] * res[3, 2, 1]
+        return tr(scalar)
+    end
+
+    # normalization
+    i = 1
+    ρR = rightenv(envs, i, state)
+    tm = TransferMatrix(state.AC[i], Hn[i], state.AC[i])
+    ρL = leftenv(envs, i, state)
+    res = tm * ρR
+    @tensor normalization[] := ρL[1, 2, 3] * res[3, 2, 1]
+
+    return vals ./ tr(normalization)
+end
+
 ############## single particle density matrix
 
 function single_particle_density_matrix(Hn, state, envs::MPSKit.FiniteEnvironments=environments(state, Hn); O1, O2, band=nothing)
@@ -116,72 +144,53 @@ end
 
 ########## local densities
 
-function particle_density(Hn, state, base_grid; compute_grid=base_grid, spdm=nothing, h=Defaults.h(base_grid))
-    N = length(state)
-    if isnothing(spdm)
-        cutoff = dim(space(first(state.AL), 2)) - 1
-        spdm = single_particle_density_matrix_tridiagonal(Hn, state, O1=a_plus(cutoff=cutoff), O2=a_min(cutoff=cutoff))
-    end
+function _make_tridiagonal_spdm(Hn, state)
+    c = dim(space(first(state.AL), 2)) - 1
+    return single_particle_density_matrix_tridiagonal(Hn, state,
+        O1=a_plus(cutoff=c), O2=a_min(cutoff=c))
+end
 
+function _make_full_spdm(Hn, state)
+    c = dim(space(first(state.AL), 2)) - 1
+    return single_particle_density_matrix(Hn, state,
+        O1=a_plus(cutoff=c), O2=a_min(cutoff=c))
+end
+
+function particle_density(spdm::AbstractMatrix, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid))
+    N = size(spdm, 1)
     return map(compute_grid) do x
         f = tent_function.(x, 1:N, h, Ref(base_grid))
-        return real(f' * spdm * f)
+        return real(dot(f, spdm, f))
     end
 end
 
-function kinetic_energy_density(Hn, state, base_grid; compute_grid=base_grid, spdm=nothing, h=Defaults.h(base_grid))
-    N = length(state)
-    if isnothing(spdm)
-        cutoff = dim(space(first(state.AL), 2)) - 1
-        spdm = single_particle_density_matrix_tridiagonal(Hn, state, O1=a_plus(cutoff=cutoff), O2=a_min(cutoff=cutoff))
-    end
+function particle_density(Hn, state, base_grid; kwargs...)
+    _spdm = _make_tridiagonal_spdm(Hn, state)
+    return particle_density(_spdm, base_grid; kwargs...)
+end
 
+function kinetic_energy_density(spdm::AbstractMatrix, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid))
+    N = size(spdm, 1)
     return map(compute_grid) do x
         df = tent_function_derivative.(x, 1:N, h, Ref(base_grid))
-        return 0.5 * real(df' * spdm * df)
+        return 0.5 * real(dot(df, spdm, df))
     end
 end
 
-function potential_energy_density(V, Hn, state, base_grid; compute_grid=base_grid, spdm=nothing, h=Defaults.h(base_grid))
-    N = length(state)
-    if isnothing(spdm)
-        cutoff = dim(space(first(state.AL), 2)) - 1
-        spdm = single_particle_density_matrix_tridiagonal(Hn, state, O1=a_plus(cutoff=cutoff), O2=a_min(cutoff=cutoff))
-    end
+function kinetic_energy_density(Hn, state, base_grid; kwargs...)
+    _spdm = _make_tridiagonal_spdm(Hn, state)
+    return kinetic_energy_density(_spdm, base_grid; kwargs...)
+end
 
+function potential_energy_density(spdm::AbstractMatrix, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid), V)
+    N = size(spdm, 1)
     return map(compute_grid) do x
         f = tent_function.(x, 1:N, h, Ref(base_grid))
-        return V(x) * real(f' * spdm * f)
+        return V(x) * real(dot(f, spdm, f))
     end
 end
 
-function generic_expval(Hn, state; O1p, O1m, O2p, O2m) # p -> creation, m -> annihilation
-    envs = environments(state, Hn)
-    N = length(state)
-
-    vals = map(1:N-1) do i
-        tm1 = TransferMatrix(state.AL[i], O1p × Hn[i] × O1m, state.AL[i])
-        tm2 = TransferMatrix(state.AC[i+1], O2p × Hn[i+1] × O2m, state.AC[i+1])
-        ρL = leftenv(envs, i, state)
-        ρR = rightenv(envs, i + 1, state)
-
-        res = tm1 * (tm2 * ρR)
-        @tensor scalar[] := ρL[1, 2, 3] * res[3, 2, 1]
-        return tr(scalar)
-    end
-
-    # normalization
-    i = 1
-    ρR = rightenv(envs, i, state)
-    tm = TransferMatrix(state.AC[i], Hn[i], state.AC[i])
-    ρL = leftenv(envs, i, state)
-    res = tm * ρR
-    @tensor normalization[] := ρL[1, 2, 3] * res[3, 2, 1]
-
-    return vals ./ tr(normalization)
-end
-
-function interaction_energy_density(Hn, state, base_grid; compute_grid=base_grid, spdm=nothing, h=Defaults.h(base_grid))
+function interaction_energy_density(Hn, state, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid))
     N = length(state)
     cutoff = dim(space(first(state.AL), 2)) - 1
 
@@ -218,43 +227,34 @@ function interaction_energy_density(Hn, state, base_grid; compute_grid=base_grid
     end
 end
 
-function get_energy_densities(Hn, state, base_grid; compute_grid=base_grid, μ, g, V, kwargs...)
-    cutoff = dim(space(first(state.AL), 2)) - 1
-    spdm = single_particle_density_matrix_tridiagonal(Hn, state, O1=a_plus(cutoff=cutoff), O2=a_min(cutoff=cutoff))
-
-    n = particle_density(Hn, state, base_grid; compute_grid=compute_grid, spdm=spdm, kwargs...)
-    ke = kinetic_energy_density(Hn, state, base_grid; compute_grid=compute_grid, spdm=spdm, kwargs...)
-    pe = potential_energy_density(V, Hn, state, base_grid; compute_grid=compute_grid, spdm=spdm, kwargs...)
-    ie = interaction_energy_density(Hn, state, base_grid; compute_grid=compute_grid, kwargs...)
+function get_energy_densities(Hn, state, base_grid; μ, g, V, kwargs...)
+    _spdm = _make_tridiagonal_spdm(Hn, state)
+    n = particle_density(_spdm, base_grid; kwargs...)
+    ke = kinetic_energy_density(_spdm, base_grid; kwargs...)
+    pe = potential_energy_density(_spdm, base_grid; V=V, kwargs...)
+    ie = interaction_energy_density(Hn, state, base_grid; kwargs...)
     return μ * n, ke, pe, g * ie
 end
 
 ### other observables
 
-function real_space_single_particle_density_matrix(xs, spdm, grid; h=Defaults.h(grid))
-    F = [tent_function(x, k, h, grid) for k in 1:size(spdm, 1), x in xs]
+function real_space_single_particle_density_matrix(spdm::AbstractMatrix, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid))
+    F = [tent_function(x, k, h, base_grid) for k in 1:size(spdm, 1), x in compute_grid]
     return F' * spdm * F
 end
-# function real_space_single_particle_density_matrix(xs, spdm, base_grid; h=Defaults.h(base_grid))
-#     N = size(spdm, 1)
-#     G = length(xs)
-#     F = zeros(Float64, N, G)
-#     for i in 1:G
-#         x = xs[i]
-#         for k in 1:N
-#             F[k, i] = tent_function(x, k, h, base_grid)
-#         end
-#     end
-#     return F' * spdm * F
-# end
 
-function momentum_distribution(ks, base_grid, spdm; h=Defaults.h(base_grid))
+function real_space_single_particle_density_matrix(Hn, state, base_grid; kwargs...)
+    _spdm = _make_tridiagonal_spdm(Hn, state)
+    return real_space_single_particle_density_matrix(_spdm, base_grid; kwargs...)
+end
+
+function momentum_distribution(spdm::AbstractMatrix, base_grid; compute_grid=base_grid, h=Defaults.h(base_grid))
     N = size(spdm, 1)
     dx = step(base_grid)
     nodes = base_grid[2:end-1]
-    nk = zeros(length(ks))
+    nk = zeros(length(compute_grid))
 
-    for (m, k) in enumerate(ks)
+    for (m, k) in enumerate(compute_grid)
         if abs(k) < 1e-10
             f_k = fill(dx^2 / h, N)
         else
@@ -263,14 +263,19 @@ function momentum_distribution(ks, base_grid, spdm; h=Defaults.h(base_grid))
             f_k = (dx^2 / h) .* sinc_factor .* phase
         end
 
-        nk[m] = real(f_k' * spdm * f_k)
+        nk[m] = real(dot(f_k, spdm, f_k))
     end
 
     return nk
 end
 
-function tan_contact(state, Hn, grid, g; kwargs...)
+function momentum_distribution(Hn, state, base_grid; kwargs...)
+    _spdm = _make_full_spdm(Hn, state)
+    return momentum_distribution(_spdm, base_grid; kwargs...)
+end
+
+function tan_contact(Hn, state, base_grid; g, kwargs...)
     cutoff = get_particle_cutoff(state)
-    Hi = _construct_interaction_hamiltonian(Hn, grid, cutoff; g, kwargs...)
+    Hi = _construct_interaction_hamiltonian(Hn, base_grid, cutoff; g, kwargs...)
     return 4 * g * real(expectation_value(state, Hi) / expectation_value(state, Hn))
 end

@@ -31,12 +31,12 @@ L = 50 # L number of segments => L-1 basis functions
 xs = range(-xmax, xmax, L + 1)
 
 ## system parameters
-V(x) = 
+V(x) = 0.5x^2
 g, μ = 10., 10.
 
 ## operator mpos
 @time Hn = build_norm_mpo(xs, cutoff)
-@time Ht = construct_hamiltonian(Hn, xs, cutoff; g=g, μ=μ, V=x->0.5x^2)
+@time Ht = construct_hamiltonian(Hn, xs, cutoff; g=g, μ=μ, V=V)
 
 ## optimization
 bond_dimension = 15

@@ -1,6 +1,6 @@
 # computes ⟨O1p_i O2_p_j N O1m_i O2m_j⟩; i.e, generic expectation values for operators in computational basis
 # p -> creation, m -> annihilation
-function generic_expval(Hn, state; O1p, O1m, O2p, O2m)
+function _nearest_neighbour_correlator(Hn, state; O1p, O1m, O2p, O2m)
     envs = environments(state, Hn)
     N = length(state)
 
@@ -199,16 +199,16 @@ function interaction_energy_density(Hn, state, base_grid; compute_grid=base_grid
     id_op = one(ad_op)
 
     # lllm, mlll
-    lllm = generic_expval(Hn, state, O1p=ad_op * ad_op, O1m=a_op, O2p=id_op, O2m=a_op)
+    lllm = _nearest_neighbour_correlator(Hn, state, O1p=ad_op * ad_op, O1m=a_op, O2p=id_op, O2m=a_op)
 
     # mmml, lmmm
-    mmml = generic_expval(Hn, state, O1p=ad_op, O1m=id_op, O2p=ad_op, O2m=a_op * a_op)
+    mmml = _nearest_neighbour_correlator(Hn, state, O1p=ad_op, O1m=id_op, O2p=ad_op, O2m=a_op * a_op)
 
     #lmml
-    lmml = generic_expval(Hn, state, O1p=ad_op, O1m=a_op, O2p=ad_op, O2m=a_op)
+    lmml = _nearest_neighbour_correlator(Hn, state, O1p=ad_op, O1m=a_op, O2p=ad_op, O2m=a_op)
 
     #llmm, mmll
-    llmm = generic_expval(Hn, state, O1p=ad_op * ad_op, O1m=id_op, O2p=id_op, O2m=a_op * a_op)
+    llmm = _nearest_neighbour_correlator(Hn, state, O1p=ad_op * ad_op, O1m=id_op, O2p=id_op, O2m=a_op * a_op)
 
     # llll
     llll = diag(single_particle_density_matrix_tridiagonal(Hn, state, O1=ad_op * ad_op, O2=a_op * a_op))

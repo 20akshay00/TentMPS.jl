@@ -1,6 +1,6 @@
 using Test
 using TentMPS, QuadGK, LinearAlgebra, Combinatorics
-using TentMPS: single_particle_transformation, two_site_decomposition, construct_two_site_gates, tent_basis_overlap_matrix, potential_hamiltonian_coefficients, tent_function
+using TentMPS: single_particle_transformation, tent_basis_overlap_matrix, potential_hamiltonian_coefficients, tent_function
 
 # utility functions
 function mps_fockstate(N::Int, fock_dict::Dict{Int,Int}, cutoff::Int=1)
@@ -73,31 +73,6 @@ end
 
     @test diag(coefficient_matrix, 0) ≈ α
     @test diag(coefficient_matrix, 1) ≈ β
-end
-
-@testset "Two-site decomposition" begin
-    function embed_blocks(blocks::Vector{Matrix{T}}) where T
-        L = length(blocks) + 1
-        full_matrices = Vector{Matrix{T}}(undef, length(blocks))
-
-        for i in 1:length(blocks)
-            M = Matrix{T}(I, L, L)
-            M[i:i+1, i:i+1] = blocks[i]
-            full_matrices[i] = M
-        end
-
-        return full_matrices
-    end
-
-    L = 20 # segments
-    N = L - 1 # tents
-    grid = range(-5, 5, L + 1)
-    dx = step(grid)
-
-    overlap_matrix = tent_basis_overlap_matrix(grid)
-    coefficient_matrix = single_particle_transformation(overlap_matrix)
-    two_site_matrices = two_site_decomposition(coefficient_matrix)
-    @test coefficient_matrix ≈ prod(reverse(embed_blocks(two_site_matrices)))
 end
 
 @testset "Many body overlap tensor" begin

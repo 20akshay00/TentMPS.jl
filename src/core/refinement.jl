@@ -21,6 +21,46 @@ function _refine_state_with_vacuum(state)
     return FiniteMPS(As, normalize=false)
 end
 
+function build_refinement_mpo(grid, cutoff::Int; truncate_physical_dim::Bool=true)
+    N = length(grid) - 2
+    fac = Float64[factorial(big(x)) for x in 0:2*cutoff]
+
+    V_phys_in = ComplexSpace(cutoff + 1)
+    V_virt = ComplexSpace(cutoff + 1)
+    V_trivial = ComplexSpace(1)
+
+    tensors = map(1:N) do i
+        VL = (i == 1) ? V_trivial : V_virt
+        VR = (i == N) ? V_trivial : V_virt
+
+        out_dim = (isodd(i) && !truncate_physical_dim) ? (2 * cutoff + 1) : (cutoff + 1)
+        V_out = ComplexSpace(out_dim)
+
+        arr = zeros(Float64, dim(VL), out_dim, cutoff + 1, dim(VR))
+
+        for r in 1:dim(VR), d in 1:cutoff+1, dp in 1:out_dim, l in 1:dim(VL)
+            nj, njp = d - 1, dp - 1
+            q_left = (i == 1) ? 0 : (l - 1)
+            q_right = (i == N) ? 0 : (r - 1)
+
+            if isodd(i)
+                if nj == 0 && njp == q_left + q_right
+                    arr[l, dp, d, r] = sqrt(fac[njp+1])
+                end
+            else
+                if nj == q_left + njp + q_right
+                    arr[l, dp, d, r] = sqrt(fac[nj+1] * fac[njp+1]) /
+                                       (fac[q_left+1] * fac[njp+1] * fac[q_right+1]) *
+                                       2^(njp - 1.5 * nj)
+                end
+            end
+        end
+        return TensorMap(arr, VL * V_out, V_phys_in * VR)
+    end
+
+    return FiniteMPO(tensors)
+end
+
 # expects vacuum inserted state and applies refinement operator
 function refine_state(state, grid; trunc_bond=true, kwargs...)
     cutoff = dim(space(state[1], 2)) - 1
@@ -33,46 +73,4 @@ function refine_state(state, grid; trunc_bond=true, kwargs...)
     end
 
     return new_grid, new_state
-end
-
-function _build_refinement_mpo(grid, cutoff; tol=1e-16)
-    N = length(grid) - 2
-    c = 1 / 2√2 # normalization, but it seems irrelevant.
-
-    # blocks for the bulk
-    blocks = [[1. c; 0. 1.], [2c 0.; c 1.]]
-    gates = construct_two_site_gates(blocks, cutoff)
-
-    UA, SA, VA = tsvd(gates[1], ((1, 3), (2, 4)), trunc=truncerr(tol))
-    UB, SB, VB = tsvd(gates[2], ((1, 3), (2, 4)), trunc=truncerr(tol))
-    USA, USB = UA * SA, UB * SB
-
-    TL = insertleftunit(transpose(USA, ((1,), (2, 3))), 1)
-    @tensor T_odd[-1 -2; -3 -4] := VA[-1 1 -3] * USB[-2 1 -4]
-    @tensor T_even[-1 -2; -3 -4] := VB[-1 1 -3] * USA[-2 1 -4]
-
-    # right boundary for odd N
-    TRB = insertrightunit(transpose(VB, ((1, 2), (3,))), 3)
-
-    # right boundary for even N
-    if iseven(N)
-        B_final = [1. c; 0. 2c]
-        gate_final = construct_two_site_gates([B_final], cutoff)[1]
-        _, _, V_final = tsvd(gate_final, ((1, 3), (2, 4)), trunc=truncerr(tol))
-        TR_final = insertrightunit(transpose(V_final, ((1, 2), (3,))), 3)
-    end
-
-    tensors = map(1:N) do i
-        i == 1 && return TL
-        i == N && return iseven(N) ? TR_final : TRB
-        return iseven(i) ? T_odd : T_even
-    end
-
-    return FiniteMPO(tensors)
-end
-
-# with possibility to add cutoff_buffer
-function build_refinement_mpo(grid, cutoff; cutoff_buffer=cutoff, trunctol=nothing, kwargs...)
-    mpo = _build_refinement_mpo(grid, cutoff + cutoff_buffer; kwargs...)
-    return change_mpo_physical_space(mpo, cutoff + 1, trunctol=trunctol)
 end

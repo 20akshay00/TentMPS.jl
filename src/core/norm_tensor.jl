@@ -15,7 +15,19 @@ function index_to_Q(q::Int, dims::Vector{Int})
 end
 
 # hard-coded for tent functions, but is in principle very general
-function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false)
+function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false, statistic=:boson)
+    if statistic == :fermion
+        if cutoff != 1
+            throw(DomainError("Particle cutoff must be 1 for fermions."))
+        end
+    elseif statistic == :boson
+        if cutoff <= 0
+            throw(DomainError("Particle cutoff must be greator than 0 for bosons."))
+        end
+    else
+        throw(DomainError("Particle statistic must be either :fermion or :boson"))
+    end
+
     L = length(grid) - 2 # number of tents
 
     overlap_matrix = tent_basis_overlap_matrix(grid; h=h)
@@ -44,7 +56,7 @@ function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false)
         VL = (i == 1) ? V_trivial : V_virt
         VR = (i == L) ? V_trivial : V_virt
 
-        out_dim = ((R + 1) * cutoff + 1)
+        out_dim = (statistic == :fermion) ? cutoff + 1 : ((R + 1) * cutoff + 1)
         V_out = ComplexSpace(out_dim)
 
         arr = zeros(Float64, dim(VL), out_dim, cutoff + 1, dim(VR))
@@ -78,6 +90,19 @@ function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false)
                         end
                     else
                         m_prod *= M[row, i]^k[r_sub+1]
+                    end
+                end
+
+                sign_factor = 1.0
+                if statistic == :fermion
+                    crossings = 0
+                    for r_sub in 0:R
+                        for r_prime in r_sub+2:R
+                            crossings += k[r_sub+1] * Q_right[r_prime]
+                        end
+                    end
+                    if isodd(crossings)
+                        sign_factor = -1.0
                     end
                 end
 

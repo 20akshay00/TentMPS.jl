@@ -2,7 +2,7 @@
 # convention: always upper triangular, i.e, a_j† = ∑(j ≤ i) c_i† M_ij
 single_particle_transformation(commutator_matrix) = (cholesky(commutator_matrix).L)'
 
-# indexing scheme to go from linear to R-tuple {Q}
+# indexing scheme to go from linear to R-tuple {Q}; basically CartesianIndex
 function index_to_Q(q::Int, dims::Vector{Int})
     R = length(dims)
     Q = zeros(Int, R)
@@ -41,9 +41,6 @@ function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false, stati
         end
     end
 
-    max_fac = max(cutoff, (R + 1) * cutoff)
-    fac = Float64[factorial(big(x)) for x in 0:max_fac]
-
     # virtual bond dimension
     dims = [(R - r + 1) * cutoff + 1 for r in 1:R]
     χ = prod(dims)
@@ -52,12 +49,18 @@ function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false, stati
     V_virt = ComplexSpace(χ)
     V_trivial = ComplexSpace(1)
 
+    out_dim = (statistic == :fermion) ? cutoff + 1 : ((R + 1) * cutoff + 1)
+    V_out = ComplexSpace(out_dim)
+
+    fac = Float64[factorial(big(x)) for x in 0:out_dim]
+
+    # look up for linear indexing of Qs 
+    Q_lookup = [index_to_Q(idx, dims) for idx in 1:χ]
+    k = zeros(Int, R + 1)
+
     tensors = map(1:L) do i
         VL = (i == 1) ? V_trivial : V_virt
         VR = (i == L) ? V_trivial : V_virt
-
-        out_dim = (statistic == :fermion) ? cutoff + 1 : ((R + 1) * cutoff + 1)
-        V_out = ComplexSpace(out_dim)
 
         arr = zeros(Float64, dim(VL), out_dim, cutoff + 1, dim(VR))
 
@@ -65,11 +68,11 @@ function build_norm_mpo(grid, cutoff::Int; h=Defaults.h(grid), getW=false, stati
             nj, njp = d - 1, dp - 1
 
             # map 1D virtual indices to Q-tuples
-            Q_left = (i == 1) ? zeros(Int, R) : index_to_Q(l_idx, dims)
-            Q_right = (i == L) ? zeros(Int, R) : index_to_Q(r_idx, dims)
+            Q_left = (i == 1) ? zeros(Int, R) : Q_lookup[l_idx]
+            Q_right = (i == L) ? zeros(Int, R) : Q_lookup[r_idx]
 
             # solve the local transition equations for path variables k
-            k = zeros(Int, R + 1)
+            k .= 0
             k[1] = njp - Q_right[1]
             for r_sub in 1:R
                 q_right_next = (r_sub == R) ? 0 : Q_right[r_sub+1]

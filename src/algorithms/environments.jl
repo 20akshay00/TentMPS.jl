@@ -11,8 +11,8 @@ struct FiniteLogEnvironments{A,B,C,D,E} <: AbstractMPSEnvironments
     GLs::Vector{D}
     GRs::Vector{D}
 
-    log_L_scales::Vector{E}
-    log_R_scales::Vector{E}
+    log_L_scales::Vector{E} # cumulative log-factors from left end
+    log_R_scales::Vector{E} # cumulative log-factors from right end
 end
 
 function log_environments(below, operator, above, leftstart, rightstart)
@@ -21,7 +21,7 @@ function log_environments(below, operator, above, leftstart, rightstart)
     leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:N]
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:N]
 
-    log_L = zeros(T, N + 1)
+    log_L = zeros(T, N + 1) 
     log_R = zeros(T, N + 1)
 
     s_l = norm(leftenvs[1])

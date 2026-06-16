@@ -57,13 +57,8 @@ function Base.iterate(it::IterativeSolver{<:VUMPS,<:GeneralizedVUMPSState}, stat
     ψ = gauge_step!(it, state, ACs)
     Henvs, Nenvs = envs_step!(it, state, ψ)
 
-    # finalizer step
     ψ, Henvs = it.finalize(state.iter, ψ, state.operator, Henvs)::Tuple{typeof(ψ),typeof(Henvs)}
-
-    # error criterion
     ϵ = calc_generalized_galerkin(ψ, state.operator, state.norm_operator, ψ, Henvs, Nenvs)
-
-    # update state
     it.state = GeneralizedVUMPSState(ψ, state.operator, state.norm_operator, Henvs, Nenvs, state.iter + 1, ϵ, state.which)
 
     return (ψ, Henvs, Nenvs, ϵ), it.state

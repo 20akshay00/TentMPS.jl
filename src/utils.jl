@@ -30,7 +30,6 @@ function tent_basis_overlap_matrix(grid; h=Defaults.h(grid))
     return SymTridiagonal(diag, offdiag)
 end
 
-## Tensor manipulation
 function multiply_physical(A, B)
 
     dimsA = [length(space(A).domain.spaces), length(space(A).codomain.spaces)]

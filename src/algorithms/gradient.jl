@@ -28,13 +28,8 @@ function fg(
 
     gs = map(1:length(state)) do i
 
-        # Heff * AC
         H_AC = AC_hamiltonian(i, state, operator, state, Henvs) * state.AC[i]
-
-        # Neff * AC
         N_AC = AC_hamiltonian(i, state, norm_operator, state, Nenvs) * state.AC[i]
-
-        # gradient (H_eff - f * N_eff) * AC / n
         AC′ = (H_AC - f * N_AC) / n
         g = Grassmann.project(AC′, state.AL[i])
 
@@ -58,11 +53,8 @@ struct GeneralizedGradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algo
         verbosity=Defaults.verbosity - 1
     )
         if isa(method, OptimKit.OptimizationAlgorithm)
-            # We were given an optimisation method, just use it.
             m = method
         elseif method <: OptimKit.OptimizationAlgorithm
-            # We were given an optimisation method type, construct an instance of it.
-            # restrict linesearch maxiter
             linesearch = OptimKit.HagerZhangLineSearch(;
                 verbosity=verbosity - 2, maxiter=100
             )

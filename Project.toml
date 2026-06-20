@@ -20,7 +20,7 @@ TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [compat]
-BlockTensorKit = "0.2.0"
+BlockTensorKit = "0.2.0, 0.3"
 FastGaussQuadrature = "1.2.0"
 KrylovKit = "0.10.2"
 LinearAlgebra = "1.11.0"

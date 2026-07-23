@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.7"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "1416647f48bda6591624c7071ea11c2fdc2e5f50"
+project_hash = "da92a07497e350d239cb9153128c21b0e98296ff"
 
 [[deps.Accessors]]
 deps = ["CompositionsBase", "ConstructionBase", "Dates", "InverseFunctions", "MacroTools"]
@@ -104,7 +104,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.1+0"
+version = "1.3.0+1"
 
 [[deps.CompositionsBase]]
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
@@ -238,7 +238,7 @@ version = "1.11.0"
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-version = "1.11.0"
+version = "1.12.0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
@@ -301,25 +301,27 @@ version = "0.5.0"
 
 [[deps.OhMyThreads]]
 deps = ["BangBang", "ChunkSplitters", "ScopedValues", "StableTasks", "TaskLocalValues"]
-git-tree-sha1 = "b3c63491156b66f60c2cd181ba05bc0b327e5c7d"
+git-tree-sha1 = "9a07c25c438110500d871fd5309649ec6791ef57"
 uuid = "67456a42-1dca-4109-a031-0a68de7e3ad5"
-version = "0.8.5"
+version = "0.8.6"
 
     [deps.OhMyThreads.extensions]
     MarkdownExt = "Markdown"
+    ProgressMeterExt = "ProgressMeter"
 
     [deps.OhMyThreads.weakdeps]
     Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+    ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.27+1"
+version = "0.3.29+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.5+0"
+version = "0.8.7+0"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl"]
@@ -530,6 +532,12 @@ version = "5.5.0"
     Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
     cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
+[[deps.TentMPS]]
+deps = ["BlockTensorKit", "FastGaussQuadrature", "KrylovKit", "LinearAlgebra", "MPSKit", "MPSKitModels", "MatrixAlgebraKit", "OhMyThreads", "OptimKit", "Random", "Reexport", "TensorKit", "TensorKitManifolds", "TensorOperations"]
+path = "."
+uuid = "067dba05-704e-437a-ab3d-0dcf84fc4586"
+version = "1.0.0-DEV"
+
 [[deps.TupleTools]]
 git-tree-sha1 = "41e43b9dc950775eac654b9f845c839cd2f1821e"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
@@ -559,4 +567,4 @@ version = "2.0.0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.11.0+0"
+version = "5.15.0+0"
